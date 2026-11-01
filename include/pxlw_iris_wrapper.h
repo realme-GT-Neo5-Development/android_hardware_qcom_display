@@ -55,4 +55,34 @@ class PxlwSoftirisWrapper {
   friend class PxlwIrisWrapper;
 };
 
+// HW Iris 5 (HIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
+// Only used when PXLW_IRIS5 is defined.
+class PxlwIris5Wrapper {
+ public:
+  void InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
+  void SetColorModeWithRenderIntent(
+      int32_t display_id, int32_t display_type,
+      android::hardware::graphics::common::V1_2::ColorMode color_mode,
+      android::hardware::graphics::common::V1_1::RenderIntent render_intent);
+
+ private:
+  PxlwIris5Wrapper() = default;
+  friend class PxlwIrisWrapper;
+};
+
+// HW Iris 7 (HIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
+// Only used when PXLW_IRIS7 is defined.
+class PxlwIris7Wrapper {
+ public:
+  void InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
+  void SetColorModeWithRenderIntent(
+      int32_t display_id, int32_t display_type,
+      android::hardware::graphics::common::V1_2::ColorMode color_mode,
+      android::hardware::graphics::common::V1_1::RenderIntent render_intent);
+
+ private:
+  PxlwIris7Wrapper() = default;
+  friend class PxlwIrisWrapper;
+};
+
 }  // namespace pxlw

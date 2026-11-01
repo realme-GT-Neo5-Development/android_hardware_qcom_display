@@ -2701,6 +2701,16 @@ int HWCSession::CreatePrimaryDisplay() {
         // with soft-iris that don't ship with iris-service binary.
         // Construct it before SDM reports the panel identity.
         iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+        auto *iris_feature = pxlw::IrisFeature::getInstance();
+        if (iris_feature) {
+          DLOGI("Iris state: hasIris=%d hasSoftIris=%d hasIris5=%d hasIris7=%d",
+                iris_feature->hasIris(), iris_feature->hasSoftIris(),
+                iris_feature->hasIris5(), iris_feature->hasIris7());
+          DLOGI("Iris state: hasIrisDual=%d hasIris5Dual=%d hasIris7Dual=%d "
+                "hasIrisDualWithoutCSC=%d",
+                iris_feature->hasIrisDual(), iris_feature->hasIris5Dual(),
+                iris_feature->hasIris7Dual(), iris_feature->hasIrisDualWithoutCSC());
+        }
 #endif
         status = HWCDisplayBuiltIn::Create(core_intf_, &buffer_allocator_, &callbacks_, this,
                                           qservice_, client_id, info.display_id, hwc_display);
@@ -2729,6 +2739,26 @@ int HWCSession::CreatePrimaryDisplay() {
         }
 
 #ifdef PXLW_IRIS
+#if defined(PXLW_IRIS5) || defined(PXLW_IRIS7)
+        // HW Iris devices ship the Iris service + rc, so just initialize the
+        // hardware wrapper for the primary panel during bring-up.
+        if (iris_wrapper) {
+          DisplayConfigVariableInfo var_info = {};
+          uint32_t config = 0;
+          (*hwc_display)->GetActiveDisplayConfig(&config);
+          if (!(*hwc_display)->GetDisplayAttributesForConfig(INT(config), &var_info)) {
+#if defined(PXLW_IRIS5)
+            reinterpret_cast<pxlw::PxlwIris5Wrapper *>(iris_wrapper)
+#else
+            reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
+#endif
+                ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels,
+                                     var_info.y_pixels);
+          } else {
+            DLOGW("Failed to get active config for hardware iris initialization");
+          }
+        }
+#else
         if (iris_wrapper && pxlw::IrisFeature::getInstance()->hasSoftIris()) {
           DisplayConfigVariableInfo var_info = {};
           uint32_t config = 0;
@@ -2740,6 +2770,7 @@ int HWCSession::CreatePrimaryDisplay() {
             DLOGW("Failed to get active config for soft-iris initialization");
           }
         }
+#endif
 #endif
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
@@ -2785,6 +2816,16 @@ int HWCSession::HandleBuiltInDisplays() {
     if (info.is_primary || info.display_type != kBuiltIn) {
       continue;
     }
+
+#if defined(PXLW_IRIS5) || defined(PXLW_IRIS7)
+    // Stock keeps the Iris secondary dual-channel display
+    // private and never hotplugs it to SurfaceFlinger.
+    // Let us do the same.
+    if (pxlw::IrisFeature::getInstance()->hasIrisDual()) {
+      DLOGI("Iris state: skipping secondary hotplug, sdm id=%d (hasIrisDual=1)", info.display_id);
+      continue;
+    }
+#endif
 
     for (auto &map_info : map_info_builtin_) {
       hwc2_display_t client_id = map_info.client_id;

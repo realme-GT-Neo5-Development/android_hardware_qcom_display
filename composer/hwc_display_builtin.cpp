@@ -483,6 +483,23 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
   }
 
 #ifdef PXLW_IRIS
+#if defined(PXLW_IRIS5) || defined(PXLW_IRIS7)
+  DLOGI("Iris color: display=%d type=%d mode=%d intent=%d",
+        static_cast<int32_t>(id_), static_cast<int32_t>(type_),
+        static_cast<int32_t>(mode), static_cast<int32_t>(intent));
+  auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
+  if (iris_wrapper) {
+#if defined(PXLW_IRIS5)
+    reinterpret_cast<pxlw::PxlwIris5Wrapper *>(iris_wrapper)
+#else
+    reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
+#endif
+        ->SetColorModeWithRenderIntent(
+            static_cast<int32_t>(id_), static_cast<int32_t>(type_),
+            static_cast<android::hardware::graphics::common::V1_2::ColorMode>(mode),
+            static_cast<android::hardware::graphics::common::V1_1::RenderIntent>(intent));
+  }
+#else
   if (pxlw::IrisFeature::getInstance()->hasSoftIris()) {
     auto *iris_wrapper = pxlw::PxlwIrisWrapper::GetInstance();
     if (iris_wrapper) {
@@ -493,6 +510,7 @@ HWC2::Error HWCDisplayBuiltIn::SetColorModeWithRenderIntent(ColorMode mode, Rend
               static_cast<android::hardware::graphics::common::V1_1::RenderIntent>(intent));
     }
   }
+#endif
 #endif
 
   callbacks_->Refresh(id_);
