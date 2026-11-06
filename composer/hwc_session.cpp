@@ -2739,38 +2739,29 @@ int HWCSession::CreatePrimaryDisplay() {
         }
 
 #ifdef PXLW_IRIS
-#if defined(PXLW_IRIS5) || defined(PXLW_IRIS7)
-        // HW Iris devices ship the Iris service + rc, so just initialize the
-        // hardware wrapper for the primary panel during bring-up.
+        auto *iris_feature = pxlw::IrisFeature::getInstance();
         if (iris_wrapper) {
           DisplayConfigVariableInfo var_info = {};
           uint32_t config = 0;
           (*hwc_display)->GetActiveDisplayConfig(&config);
           if (!(*hwc_display)->GetDisplayAttributesForConfig(INT(config), &var_info)) {
-#if defined(PXLW_IRIS5)
-            reinterpret_cast<pxlw::PxlwIris5Wrapper *>(iris_wrapper)
-#else
-            reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
-#endif
-                ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels,
+            if (iris_feature->hasIris5()) {
+                reinterpret_cast<pxlw::PxlwIris5Wrapper *>(iris_wrapper)
+                    ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels,
                                      var_info.y_pixels);
-          } else {
-            DLOGW("Failed to get active config for hardware iris initialization");
+            } else if (iris_feature->hasIris7()) {
+                reinterpret_cast<pxlw::PxlwIris7Wrapper *>(iris_wrapper)
+                    ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels,
+                                     var_info.y_pixels);
+            } else if (iris_feature->hasSoftIris()) {
+                reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
+                    ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels,
+                                     var_info.y_pixels);
+            } else {
+                DLOGW("Failed to get active config for iris initialization");
+            }
           }
         }
-#else
-        if (iris_wrapper && pxlw::IrisFeature::getInstance()->hasSoftIris()) {
-          DisplayConfigVariableInfo var_info = {};
-          uint32_t config = 0;
-          (*hwc_display)->GetActiveDisplayConfig(&config);
-          if (!(*hwc_display)->GetDisplayAttributesForConfig(INT(config), &var_info)) {
-            reinterpret_cast<pxlw::PxlwSoftirisWrapper *>(iris_wrapper)
-                ->InitPrimaryDisplay(var_info.vsync_period_ns, var_info.x_pixels, var_info.y_pixels);
-          } else {
-            DLOGW("Failed to get active config for soft-iris initialization");
-          }
-        }
-#endif
 #endif
       } else {
         DLOGE("Primary display creation has failed! status = %d", status);
@@ -2817,7 +2808,7 @@ int HWCSession::HandleBuiltInDisplays() {
       continue;
     }
 
-#if defined(PXLW_IRIS5) || defined(PXLW_IRIS7)
+#ifdef PXLW_IRIS
     // Stock keeps the Iris secondary dual-channel display
     // private and never hotplugs it to SurfaceFlinger.
     // Let us do the same.

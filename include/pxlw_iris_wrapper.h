@@ -56,7 +56,6 @@ class PxlwSoftirisWrapper {
 };
 
 // HW Iris 5 (HIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
-// Only used when PXLW_IRIS5 is defined.
 class PxlwIris5Wrapper {
  public:
   void InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
@@ -71,7 +70,6 @@ class PxlwIris5Wrapper {
 };
 
 // HW Iris 7 (HIDL-based) wrapper entry points exported by vendor libpwirishalwrapper.so.
-// Only used when PXLW_IRIS7 is defined.
 class PxlwIris7Wrapper {
  public:
   void InitPrimaryDisplay(int32_t vsync_period_ns, uint32_t width, uint32_t height);
